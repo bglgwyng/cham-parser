@@ -1,6 +1,11 @@
 module Main where
 
+import Text.Megaparsec
+
 import Lib
 
 main :: IO ()
-main = someFunc
+main = do
+  input <- getContents
+  parseTest document input
+  return ()
