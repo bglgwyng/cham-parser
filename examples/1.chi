@@ -1,5 +1,6 @@
-a: a-> (b-> (c->d)->e)
-a: (a) (b d) (c->d)  -> (d->( b-> c) -> d)
+a : (b) (c)
+a: (b -> (e: c->d) -> e)
+a: (a) (b d) ((c: d)->d)  -> (d->((b:d)-> c) -> d)
 
 
 data A a = A { b : String, c: s -> d, d: a d } | B

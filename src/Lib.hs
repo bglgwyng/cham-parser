@@ -10,11 +10,14 @@ import qualified Text.Megaparsec.Char.Lexer as L
 
 data FunctionArgument =
     Named String TypeDefinition |
-    Anonymous String 
-    deriving (Show)
+    Unnamed TypeDefinition 
+
+instance Show FunctionArgument where
+    show (Named x y) = "(" ++ x ++ " : " ++ show y ++ ")"
+    show (Unnamed y) = show y
 
 data TypeDefinition =
-    Arrow TypeDefinition TypeDefinition |
+    Arrow FunctionArgument TypeDefinition |
     Apply TypeDefinition TypeDefinition |
     Paren TypeDefinition |
     Variable String
@@ -83,16 +86,21 @@ paren a = between (symbol "(" ) (symbol ")") a
 variable :: Parser TypeDefinition
 variable = identifier <&> Variable
 
-arrow :: Parser TypeDefinition
-arrow = symbol "->" >> typeDefinition'
+arrow :: FunctionArgument -> Parser TypeDefinition
+arrow x = symbol "->" >> typeDefinition' <&> Arrow x
 
 typeDefinition' :: Parser TypeDefinition
-typeDefinition' = do
-    x <- (try variable) <|> ((paren typeDefinition') <&> Paren)
-    choice $ [
-        symbol "->" >> typeDefinition' <&> Arrow x,
-        typeDefinition' <&> Apply x,
-        return x]
+typeDefinition' = 
+    (try $ do
+        argName <- symbol "(" >> identifier
+        argType <- symbol ":" >> typeDefinition' <* symbol ")"
+        arrow $ Named argName argType)
+        <|> do
+            x <- variable <|> ((paren typeDefinition') <&> Paren)
+            choice [
+                arrow $ Unnamed x,
+                typeDefinition' <&> Apply x,
+                return x]
 
 dataDefinition :: Parser Definition
 dataDefinition = do 
