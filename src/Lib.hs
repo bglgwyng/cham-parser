@@ -66,13 +66,16 @@ instance Show Document where
 type Parser = Parsec Void String
 
 lineComment :: Parser ()
-lineComment = (L.skipLineComment "#")
+lineComment = L.skipLineComment "--"
+
+blockComment :: Parser ()
+blockComment = L.skipBlockComment "{-" "-}"
 
 scn :: Parser ()
-scn = L.space space1 lineComment empty
+scn = L.space space1 lineComment blockComment
 
 sc :: Parser ()
-sc = L.space (try x <|> try indent) lineComment empty where
+sc = L.space (try x <|> try indent) lineComment blockComment where
     space = char ' ' <|> char '\t'
     indent = void $ newline >> some space
     x = void $ (some space >> optional indent)
