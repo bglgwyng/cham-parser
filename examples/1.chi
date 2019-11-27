@@ -1,11 +1,14 @@
-a : (b) (c)
-a: (b -> (e: c->d) -> e)
-a: (a) (b d) ((c: d)->d)  -> (d->((b:d)-> c) -> d)
+data 
+ A 
+ a = A { b : String, c: s -> d, d: a d } | B
 
 
-data A a = A { b : String, c: s -> d, d: a d } | B
-
-
-#data A a = A (a -> a) | A { a: String -> b } | A b -> c| C {b:String -> String}
+data A a = A (a -> a) | A { a: 
+ String -> b } | A b -> c| C {b:String -> String}
 #data A a = A { a: String } | A b
 # data A a = A a | B | C {a:b}
+
+#a : (b) 
+# (c)
+#a: (b -> (e: c->d) -> e)
+#a: (a) (b d) ((c: d)->d)  -> (d->((b:d)-> c) -> d)

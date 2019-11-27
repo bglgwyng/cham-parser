@@ -72,7 +72,10 @@ scn :: Parser ()
 scn = L.space space1 lineComment empty
 
 sc :: Parser ()
-sc = L.space (void $ some (char ' ' <|> char '\t')) lineComment empty
+sc = L.space (try x <|> try indent) lineComment empty where
+    space = char ' ' <|> char '\t'
+    indent = void $ newline >> some space
+    x = void $ (some space >> optional indent)
 
 symbol :: String -> Parser String
 symbol = L.symbol sc
