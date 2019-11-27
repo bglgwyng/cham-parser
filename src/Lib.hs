@@ -1,11 +1,13 @@
+{-# LANGUAGE TupleSections #-}
+
 module Lib where
 
-import Control.Monad
-import Data.Void
-import Data.Functor
-import Data.List
-import Text.Megaparsec
-import Text.Megaparsec.Char
+import           Control.Monad
+import           Data.Functor
+import           Data.List
+import           Data.Void
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
 data FunctionArgument =
@@ -24,9 +26,9 @@ data TypeDefinition =
 
 instance Show TypeDefinition where
     show x = case x of
-        Arrow y z -> show y ++ " -> " ++ show z
-        Apply y z -> show y ++ " " ++ show z
-        Paren y -> "(" ++ show y ++ ")"
+        Arrow y z  -> show y ++ " -> " ++ show z
+        Apply y z  -> show y ++ " " ++ show z
+        Paren y    -> "(" ++ show y ++ ")"
         Variable y -> y
 
 data Constructor = 
@@ -39,12 +41,12 @@ instance Show Constructor where
 
 data Definition = 
     DataDefinition {
-        name :: String,
-        args :: [String],
+        name     :: String,
+        args     :: [String],
         variants :: [(String, Constructor)]
     } |
     FunctionDefinition {
-        name :: String,
+        name           :: String,
         typeDefinition :: TypeDefinition
     }
 
