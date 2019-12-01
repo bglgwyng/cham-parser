@@ -1,6 +1,6 @@
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TupleSections, NamedFieldPuns, FlexibleInstances #-}
 
-module Lib where
+module Lib (root) where 
 
 import           Control.Monad
 import           Data.Functor
@@ -10,9 +10,20 @@ import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
+data Annotation = SimpleAnnotation String | AssignmentAnnotation String String
+
+type Annotations = [Annotation]
+
+instance Show Annotation where
+    show (SimpleAnnotation x) = "@" ++ x
+    show (AssignmentAnnotation x y) = "@" ++ x ++ " = " ++ y
+
+instance {-# Overlapping #-} Show Annotations where
+    show xs = concat ((++ "\n") . show <$> xs)
+
 data FunctionArgument =
     Named String TypeDefinition |
-    Unnamed TypeDefinition 
+    Unnamed TypeDefinition
 
 instance Show FunctionArgument where
     show (Named x y) = "(" ++ x ++ " : " ++ show y ++ ")"
@@ -31,47 +42,67 @@ instance Show TypeDefinition where
         Paren y    -> "(" ++ show y ++ ")"
         Variable y -> y
 
-data Constructor = 
+data Constructor =
     Simple [TypeDefinition] |
-    Record [(String, TypeDefinition)] 
+    Record [(String, TypeDefinition)]
 
 instance Show Constructor where
     show (Simple as) = intercalate " " (map show as)
     show (Record fields) = "{ " ++ intercalate ", " [x ++ " : " ++ show y | (x, y) <- fields] ++ " }"
-
-data Definition = 
+    
+data TopLevelStatement =
     DataDefinition {
         name     :: String,
         args     :: [String],
-        variants :: [(String, Constructor)]
+        variants :: [(Annotations, String, Constructor)],
+        annotations :: Annotations
     } |
     FunctionDefinition {
         name           :: String,
-        typeDefinition :: TypeDefinition
+        typeDefinition :: TypeDefinition,
+        annotations :: Annotations
     }
 
-instance Show Definition where
-    show DataDefinition { name = name, args = args, variants = variants } = 
-        "data " ++ name ++ args'
-            ++ " = " ++ variants' where
-                args' = concat [" " ++ x | x <- args]
-                variants' = " | " `intercalate` [x ++ " " ++ show y | (x, y) <- variants]
-    show FunctionDefinition { name = name, typeDefinition = typeDefinition } =
-        name ++ " : " ++ (show typeDefinition)
+instance Show TopLevelStatement where
+    show DataDefinition { name, args, variants, annotations } =
+        show annotations
+        ++ "data " ++ name ++ args'
+        ++ " = " ++ variants' where
+            args' = concat [" " ++ x | x <- args]
+            variants' = " | " `intercalate` [show x ++ y ++ " " ++ show z | (x, y, z) <- variants]
+    show FunctionDefinition { name, typeDefinition, annotations } =
+        show annotations
+        ++ name ++ " : " ++ (show typeDefinition)
 
-data Document =  Document [Definition]
+data Root = Root [TopLevelStatement]
 
-instance Show Document where
-    show (Document definitions) = intercalate "\n" (map show definitions)
+instance Show Root where
+    show (Root definitions) = intercalate "\n" (map show definitions)
 
 
 type Parser = Parsec Void String
 
 lineComment :: Parser ()
-lineComment = L.skipLineComment "--"
+lineComment = void lineComment'
 
 blockComment :: Parser ()
-blockComment = L.skipBlockComment "{-" "-}"
+blockComment = void blockComment'
+
+emptyLine :: Parser ()
+emptyLine = some space >> void eol
+
+emptyLine' :: Parser ()
+emptyLine' = sc >> void eol
+
+lineComment' =
+    hidden (char '#') >> takeWhileP Nothing (\x -> x /= '\n')
+
+blockComment' = empty
+
+comment' = (try lineComment') <|> (blockComment')
+
+scn' :: Parser ()
+scn' = L.space space1 empty empty
 
 scn :: Parser ()
 scn = L.space space1 lineComment blockComment
@@ -79,14 +110,14 @@ scn = L.space space1 lineComment blockComment
 sc :: Parser ()
 sc = L.space (try x <|> try indent) lineComment blockComment where
     space = char ' ' <|> char '\t'
-    indent = void $ newline >> some space
+    indent = void $ eol >> some space
     x = void $ (some space >> optional indent)
 
 symbol :: String -> Parser String
 symbol = L.symbol sc
 
 identifier :: Parser String
-identifier = L.lexeme sc $ some letterChar 
+identifier = L.lexeme sc $ some letterChar
 
 paren :: Parser a -> Parser a
 paren a = between (symbol "(" ) (symbol ")") a
@@ -94,11 +125,24 @@ paren a = between (symbol "(" ) (symbol ")") a
 variable :: Parser TypeDefinition
 variable = identifier <&> Variable
 
+stringLiteral :: Parser String
+stringLiteral = L.lexeme scn $ char '"' >> manyTill L.charLiteral (char '"')
+
+untilSpace :: Parser String
+untilSpace = L.lexeme scn $ takeWhile1P Nothing (\x -> notElem x " \t\n")
+
+annotations' :: Parser Annotations
+annotations' = many $ do
+    symbol "@"
+    x <- identifier
+    (try $ symbol "=" >> (try stringLiteral <|> untilSpace) <&> AssignmentAnnotation x)
+        <|> (scn >> (return $ SimpleAnnotation x))
+
 arrow :: FunctionArgument -> Parser TypeDefinition
 arrow x = symbol "->" >> typeDefinition' <&> Arrow x
 
 typeDefinition' :: Parser TypeDefinition
-typeDefinition' = 
+typeDefinition' =
     (try $ do
         argName <- symbol "(" >> identifier
         argType <- symbol ":" >> typeDefinition' <* symbol ")"
@@ -110,20 +154,21 @@ typeDefinition' =
                 typeDefinition' <&> Apply x,
                 return x]
 
-dataDefinition :: Parser Definition
-dataDefinition = do 
+dataDefinition :: Annotations -> Parser TopLevelStatement
+dataDefinition annotations = do
     symbol "data"
     name <- identifier
     args <- many identifier
     symbol "="
     variants <- sepBy1 (do
+        annotations <- annotations'
         name <- identifier
-        -- FIXME: why not working order swapped? 
+        -- FIXME: why not working order swapped?
         y <- (try $ record)
             <|> simple
-        return $ (name, y))
+        return $ (annotations, name, y))
         $ symbol "|"
-    return DataDefinition {name = name, args = args, variants = variants} where
+    return DataDefinition { name, args, variants, annotations } where
         record = do
             symbol "{"
             fields <- sepBy (do
@@ -136,15 +181,21 @@ dataDefinition = do
         simple = do
             args <- many typeDefinition'
             return $ Simple args
-            
-functionDefinition :: Parser Definition
-functionDefinition = do
+
+functionDefinition :: Annotations -> Parser TopLevelStatement
+functionDefinition annotations = do
     name <- identifier
     symbol ":"
     typeDefinition'' <- typeDefinition'
-    return $ FunctionDefinition {name = name, typeDefinition = typeDefinition''}
+    return $ FunctionDefinition {name = name, typeDefinition = typeDefinition'', annotations}
 
-document :: Parser Document
-document = do
-    x <- manyTill ((try dataDefinition <|> functionDefinition) <* scn) eof
-    return $ Document x
+root :: Parser Root
+root =
+    scn 
+    >> manyTill
+        (do
+            x <- option [] (annotations')
+            (try (dataDefinition x) 
+                <|> functionDefinition x) <* scn) 
+        eof
+    <&> Root

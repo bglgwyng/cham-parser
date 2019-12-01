@@ -1,17 +1,48 @@
-data 
- A -- line comment
+ #[asf] sdfsdf
+# 1
+# 2
+##  s
+# 3
+#ssfs
+# sfs
+@JSON
+data List a = Nil | Cons a
+
+@JSON
+data Boolean = True | False
+
+@JSON
+Number: Type
+
+@JSON
+String: Type
+
+@A
+ =
+ "Aas sdasd" 
+@a
+
+
+data A # line comment
+  a = 
+  @dsdsad = aaa @sdfsd   AA { b : String, c: s -> d, d: a d } | B
+#sdfsd
+#asdfsd
+data A # line comment
  a = A { b : String, c: s -> d, d: a d } | B
 
 
-data A a = A (a -> a) | A { a: --sdfsdf
- String -> b } | {- block comment -} A b -> c| C {b:String -> String}
--- data A a = A { a: String } | A b
-{- data A a = A a | B | C {a:b}
-block comment
+# sad
+# sdfsdf
+data A a = 
+  A (a -> a) | A { a: #sdfsdf
+ String -> b } | A b -> c| C {b:String -> String}
 
-block commentblock comment -}
+# data A a = A { a: String } | A b
 
--- a : (b) 
---  (c)
+# a : (b) 
+#  (c)
+@Asdfds
 a: (b -> (e: c->d) -> e)
 a: (a) (b d) ((c: d)->d)  -> (d->((b:d)-> c) -> d)
+#

@@ -4,8 +4,12 @@ import Text.Megaparsec
 
 import Lib
 
+import Document
+
 main :: IO ()
 main = do
+  -- parseTest document "#[ssdfd]"
   input <- getContents
-  parseTest document input
+  parseTest root input
+  -- parseTest emptyComment input
   return ()
