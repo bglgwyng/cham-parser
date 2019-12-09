@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections, NamedFieldPuns, FlexibleInstances #-}
 
-module Lib (root) where 
+module Lib (source) where 
 
 import           Control.Monad
 import           Data.Functor
@@ -13,30 +13,30 @@ import qualified Text.Megaparsec.Char.Lexer as L
 
 data Annotation = SimpleAnnotation String | AssignmentAnnotation String String
 
-type Annotations = [Annotation]
-
 instance Show Annotation where
     show (SimpleAnnotation x) = "@" ++ x
     show (AssignmentAnnotation x y) = "@" ++ x ++ " = " ++ y
 
+type Annotations = [Annotation]
+
 instance {-# Overlapping #-} Show Annotations where
     show xs = concat ((++ "\n") . show <$> xs)
 
-data FunctionArgument =
-    Named String TypeDefinition |
-    Unnamed TypeDefinition
+data Argument =
+    NamedArgument String Term |
+    UnnamedArgument Term
 
-instance Show FunctionArgument where
-    show (Named x y) = "(" ++ x ++ " : " ++ show y ++ ")"
-    show (Unnamed y) = show y
+instance Show Argument where
+    show (NamedArgument x y) = "(" ++ x ++ " : " ++ show y ++ ")"
+    show (UnnamedArgument y) = show y
 
-data TypeDefinition =
-    Arrow FunctionArgument TypeDefinition |
-    Apply TypeDefinition TypeDefinition |
-    Paren TypeDefinition |
+data Term =
+    Arrow Argument Term |
+    Apply Term Term |
+    Paren Term |
     Variable String
 
-instance Show TypeDefinition where
+instance Show Term where
     show x = case x of
         Arrow y z  -> show y ++ " -> " ++ show z
         Apply y z  -> show y ++ " " ++ show z
@@ -44,8 +44,8 @@ instance Show TypeDefinition where
         Variable y -> y
 
 data Constructor =
-    Simple [TypeDefinition] |
-    Record [(String, TypeDefinition)]
+    Simple [Term] |
+    Record [(String, Term)]
 
 instance Show Constructor where
     show (Simple as) = intercalate " " (map show as)
@@ -59,16 +59,16 @@ instance Show ImportRule where
     show (UnqualifedOnly xs) = " { " ++ intercalate ", " [x ++ show y | (x, y) <- xs] ++ " }"
     show (Qualified xs) = " " ++ xs
 
-data TopLevelStatement =
-    DataDefinition {
+data TopLevelDeclaration =
+    DataDeclaration {
         name     :: String,
         args     :: [String],
         variants :: [(Annotations, String, Constructor)],
         annotations :: Annotations
     } |
-    FunctionDefinition {
+    TypeDeclaration {
         name           :: String,
-        typeDefinition :: TypeDefinition,
+        typeDefinition :: Term,
         annotations :: Annotations
     } | 
     Import {
@@ -77,24 +77,24 @@ data TopLevelStatement =
         annotations :: Annotations
     }
 
-instance Show TopLevelStatement where
-    show DataDefinition { name, args, variants, annotations } =
+instance Show TopLevelDeclaration where
+    show DataDeclaration { name, args, variants, annotations } =
         show annotations
         ++ "data " ++ name ++ args'
         ++ " = " ++ variants' where
             args' = concat [" " ++ x | x <- args]
             variants' = " | " `intercalate` [show x ++ y ++ " " ++ show z | (x, y, z) <- variants]
-    show FunctionDefinition { name, typeDefinition, annotations } =
+    show TypeDeclaration { name, typeDefinition, annotations } =
         show annotations
         ++ name ++ " : " ++ (show typeDefinition)
     show Import { annotations, url, rule } =
         show annotations
         ++ "import " ++ show url ++ show rule
 
-data Root = Root [TopLevelStatement]
+data Source = Source [TopLevelDeclaration]
 
-instance Show Root where
-    show (Root definitions) = intercalate "\n" (map show definitions)
+instance Show Source where
+    show (Source definitions) = intercalate "\n" (map show definitions)
 
 
 type Parser = Parsec Void String
@@ -130,10 +130,10 @@ identifier = L.lexeme sc $ (sepBy1 x $ char '.') <&> intercalate "." where
         rest <- takeWhileP Nothing (\x -> isAlpha x || isDigit x || elem x "'")
         return $ first:rest
 
-paren :: Parser a -> Parser a
-paren a = between (symbol "(" ) (symbol ")") a
+parenthesized :: Parser a -> Parser a
+parenthesized a = between (symbol "(" ) (symbol ")") a
 
-variable :: Parser TypeDefinition
+variable :: Parser Term
 variable = identifier <&> Variable
 
 annotations' :: Parser Annotations
@@ -143,24 +143,24 @@ annotations' = many $ do
     (try $ symbol "=" >> ((try stringLiteral <* scn) <|> untilSpace) <&> AssignmentAnnotation x)
         <|> (scn >> (return $ SimpleAnnotation x))
 
-arrow :: FunctionArgument -> Parser TypeDefinition
-arrow x = symbol "->" >> typeDefinition' <&> Arrow x
+arrow :: Argument -> Parser Term
+arrow x = symbol "->" >> term <&> Arrow x
 
-typeDefinition' :: Parser TypeDefinition
-typeDefinition' =
+term :: Parser Term
+term =
     (try $ do
         argName <- symbol "(" >> identifier
-        argType <- symbol ":" >> typeDefinition' <* symbol ")"
-        arrow $ Named argName argType)
+        argType <- symbol ":" >> term <* symbol ")"
+        arrow $ NamedArgument argName argType)
         <|> do
-            x <- variable <|> ((paren typeDefinition') <&> Paren)
+            x <- variable <|> ((parenthesized term) <&> Paren)
             choice [
-                arrow $ Unnamed x,
-                typeDefinition' <&> Apply x,
+                arrow $ UnnamedArgument x,
+                term <&> Apply x,
                 return x]
 
-dataDefinition :: Annotations -> Parser TopLevelStatement
-dataDefinition annotations = do
+dataDeclaration :: Annotations -> Parser TopLevelDeclaration
+dataDeclaration annotations = do
     symbol "data"
     name <- identifier
     args <- many identifier
@@ -173,26 +173,26 @@ dataDefinition annotations = do
             <|> simple
         return $ (annotations, name, y))
         $ symbol "|"
-    return DataDefinition { name, args, variants, annotations } where
+    return DataDeclaration { name, args, variants, annotations } where
         record = do
             symbol "{"
             fields <- sepBy (do
                 name <- identifier
                 symbol ":"
-                typeDefinition <- typeDefinition'
+                typeDefinition <- term
                 return (name, typeDefinition)) (symbol ",")
             symbol "}"
             return $  Record fields
         simple = do
-            args <- many typeDefinition'
+            args <- many term
             return $ Simple args
 
-functionDefinition :: Annotations -> Parser TopLevelStatement
-functionDefinition annotations = do
+typeDeclaration :: Annotations -> Parser TopLevelDeclaration
+typeDeclaration annotations = do
     name <- identifier
     symbol ":"
-    typeDefinition'' <- typeDefinition'
-    return $ FunctionDefinition {name = name, typeDefinition = typeDefinition'', annotations}
+    term' <- term
+    return $ TypeDeclaration {name = name, typeDefinition = term', annotations}
 
 importRule :: Parser ImportRule
 importRule = option Unqualifed 
@@ -204,20 +204,20 @@ importRule = option Unqualifed
                 return (x, y)) $ symbol ",")
                 <&> UnqualifedOnly))
 
-import' :: Annotations -> Parser TopLevelStatement
+import' :: Annotations -> Parser TopLevelDeclaration
 import' annotations = do
     symbol "import"
     url <- stringLiteral
     rule <- importRule
     return $ Import { url, rule, annotations }
 
-root :: Parser Root
-root =
+source :: Parser Source
+source =
     scn 
     >> manyTill
         (do
             x <- option [] (annotations')
-            choice [import' x, dataDefinition x, functionDefinition x]
+            choice [import' x, dataDeclaration x, typeDeclaration x]
             <* scn) 
         eof
-    <&> Root
+    <&> Source

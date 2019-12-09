@@ -7,5 +7,5 @@ import Lib
 main :: IO ()
 main = do
   input <- getContents
-  parseTest root input
+  parseTest source input
   return ()
