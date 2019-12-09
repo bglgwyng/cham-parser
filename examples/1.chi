@@ -1,3 +1,10 @@
+@aaa
+import "asdf"
+@aa
+@aaa
+import "asdfsdfdsd\""
+
+import "asd" { b, c {d, e}, f g }
  #[asf] sdfsdf
 # 1
 # 2
