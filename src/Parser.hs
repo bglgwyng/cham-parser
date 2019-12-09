@@ -58,7 +58,7 @@ variable :: Parser Term
 variable = identifier <&> Variable
 
 annotations' :: Parser Annotations
-annotations' = many $ do
+annotations' = hidden $ many $ do
     symbol "@"
     x <- identifier
     (try $ symbol "=" >> ((try stringLiteral <* scn) <|> untilSpace) <&> AssignmentAnnotation x)
