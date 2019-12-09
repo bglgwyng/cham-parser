@@ -94,7 +94,7 @@ dataDeclaration annotations = do
     return DataDeclaration { name, args, variants, annotations } where
         record = do
             symbol "{"
-            fields <- sepBy (do
+            fields <- sepBy1 (do
                 name <- identifier
                 symbol ":"
                 typeDefinition <- term
