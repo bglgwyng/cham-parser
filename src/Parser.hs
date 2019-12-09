@@ -32,6 +32,9 @@ sc = L.space (try x <|> try indent) lineComment blockComment where
     indent = void $ eol >> some space
     x = void $ (some space >> optional indent)
 
+linebreak :: Parser ()
+linebreak = void $ some $ sc >> eol
+
 symbol :: String -> Parser String
 symbol = L.symbol sc
 
@@ -132,10 +135,9 @@ import' annotations = do
 source :: Parser Source
 source =
     scn
-    >> manyTill
+    >> sepEndBy
         (do
             x <- option [] (annotations')
-            choice [import' x, dataDeclaration x, typeDeclaration x]
-            <* scn)
-        eof
+            choice [import' x, dataDeclaration x, typeDeclaration x]) linebreak
+    <* eof
     <&> Source

@@ -51,3 +51,6 @@ data A a =
 a: (b -> (e: c->d) -> e)
 a: (a) (b d) ((c: d)->d)  -> (d->((b:d)-> c) -> d)
 #
+
+data A = B {a: s}
+data B = B
