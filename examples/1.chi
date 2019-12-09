@@ -4,7 +4,7 @@ import "asdf"
 @aaa
 import "asdfsdfdsd\""
 
-import "asd" { b, c {d, e}, f g }
+import "asd" { bas123.asdsa, c {d, e}, f g }
  #[asf] sdfsdf
 # 1
 # 2
@@ -19,7 +19,7 @@ data List a = Nil | Cons a
 data Boolean = True | False
 
 @JSON
-Number: Type
+Number.a123213'.a': Type
 
 @JSON
 String: Type

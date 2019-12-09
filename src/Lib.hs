@@ -4,6 +4,7 @@ module Lib (root) where
 
 import           Control.Monad
 import           Data.Functor
+import           Data.Char
 import           Data.List
 import           Data.Void
 import           Text.Megaparsec
@@ -123,7 +124,11 @@ untilSpace :: Parser String
 untilSpace = L.lexeme scn $ takeWhile1P Nothing (\x -> notElem x " \t\n")
 
 identifier :: Parser String
-identifier = L.lexeme sc $ some letterChar
+identifier = L.lexeme sc $ (sepBy1 x $ char '.') <&> intercalate "." where
+    x = do
+        first <- satisfy isAlpha
+        rest <- takeWhileP Nothing (\x -> isAlpha x || isDigit x || elem x "'")
+        return $ first:rest
 
 paren :: Parser a -> Parser a
 paren a = between (symbol "(" ) (symbol ")") a
