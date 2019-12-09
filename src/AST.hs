@@ -44,8 +44,8 @@ data Constructor =
     Record [(String, Term)]
 
 instance Show Constructor where
-    show (Simple as) = intercalate " " (map show as)
-    show (Record fields) = "{ " ++ intercalate ", " [x ++ " : " ++ show y | (x, y) <- fields] ++ " }"
+    show (Simple as) = concat (map ((" " ++) . show) as)
+    show (Record fields) = " { " ++ intercalate ", " [x ++ " : " ++ show y | (x, y) <- fields] ++ " }"
 
 -- TODO: Better name
 data ImportRule = Unqualifed | UnqualifedOnly [(String, ImportRule)] | Qualified String
@@ -79,7 +79,7 @@ instance Show TopLevelDeclaration where
         ++ "data " ++ name ++ args'
         ++ " = " ++ variants' where
             args' = concat [" " ++ x | x <- args]
-            variants' = " | " `intercalate` [show x ++ y ++ " " ++ show z | (x, y, z) <- variants]
+            variants' = " | " `intercalate` [show x ++ y ++ show z | (x, y, z) <- variants]
     show TypeDeclaration { name, typeDefinition, annotations } =
         show annotations
         ++ name ++ " : " ++ (show typeDefinition)

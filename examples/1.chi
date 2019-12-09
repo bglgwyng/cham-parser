@@ -1,9 +1,11 @@
-@aaa = a
-import "asdf"
-@aa = "asdsa"
+
 @aaa
+@b
 import "asdfsdfdsd"
 
+@aaa = "a"
+import "asdf"
+@aa = "asdsa"
 import "asd" { bas123.asdsa, c {d, e}, f g }
  #[asf] sdfsdf
 # 1
@@ -12,7 +14,6 @@ import "asd" { bas123.asdsa, c {d, e}, f g }
 # 3
 #ssfs
 # sfs
-@JSON
 data List a = Nil | Cons a
 
 @JSON
@@ -26,11 +27,11 @@ String: Type
 
 @A
  =
- "Aas sdasd" 
-@a
+ "Aas sdasd"
 data A # line comment
   a = 
-  @dsdsad = aaa @sdfsd   AA { b : String, c: s -> d, d: a d } | B
+  @dsdsad = aaa @sdfsd 
+AA { b : String, c: s -> d, d: a d } | B
 #sdfsd
 #asdfsd
 data A # line comment
