@@ -50,6 +50,14 @@ instance Show Constructor where
     show (Simple as) = intercalate " " (map show as)
     show (Record fields) = "{ " ++ intercalate ", " [x ++ " : " ++ show y | (x, y) <- fields] ++ " }"
     
+-- TODO: Better name
+data ImportRule = Unqualifed | UnqualifedOnly [(String, ImportRule)] | Qualified String
+
+instance Show ImportRule where
+    show Unqualifed = "";
+    show (UnqualifedOnly xs) = " { " ++ intercalate ", " [x ++ show y | (x, y) <- xs] ++ " }"
+    show (Qualified xs) = " " ++ xs
+
 data TopLevelStatement =
     DataDefinition {
         name     :: String,
@@ -60,6 +68,11 @@ data TopLevelStatement =
     FunctionDefinition {
         name           :: String,
         typeDefinition :: TypeDefinition,
+        annotations :: Annotations
+    } | 
+    Import {
+        url :: String,
+        rule :: ImportRule,
         annotations :: Annotations
     }
 
@@ -73,6 +86,9 @@ instance Show TopLevelStatement where
     show FunctionDefinition { name, typeDefinition, annotations } =
         show annotations
         ++ name ++ " : " ++ (show typeDefinition)
+    show Import { annotations, url, rule } =
+        show annotations
+        ++ "import " ++ show url ++ show rule
 
 data Root = Root [TopLevelStatement]
 
@@ -83,26 +99,10 @@ instance Show Root where
 type Parser = Parsec Void String
 
 lineComment :: Parser ()
-lineComment = void lineComment'
+lineComment = void $ hidden (char '#') >> takeWhileP Nothing (\x -> x /= '\n')
 
 blockComment :: Parser ()
-blockComment = void blockComment'
-
-emptyLine :: Parser ()
-emptyLine = some space >> void eol
-
-emptyLine' :: Parser ()
-emptyLine' = sc >> void eol
-
-lineComment' =
-    hidden (char '#') >> takeWhileP Nothing (\x -> x /= '\n')
-
-blockComment' = empty
-
-comment' = (try lineComment') <|> (blockComment')
-
-scn' :: Parser ()
-scn' = L.space space1 empty empty
+blockComment = void empty
 
 scn :: Parser ()
 scn = L.space space1 lineComment blockComment
@@ -116,6 +116,12 @@ sc = L.space (try x <|> try indent) lineComment blockComment where
 symbol :: String -> Parser String
 symbol = L.symbol sc
 
+stringLiteral :: Parser String
+stringLiteral = L.lexeme sc $ char '"' >> manyTill L.charLiteral (char '"')
+
+untilSpace :: Parser String
+untilSpace = L.lexeme scn $ takeWhile1P Nothing (\x -> notElem x " \t\n")
+
 identifier :: Parser String
 identifier = L.lexeme sc $ some letterChar
 
@@ -125,17 +131,11 @@ paren a = between (symbol "(" ) (symbol ")") a
 variable :: Parser TypeDefinition
 variable = identifier <&> Variable
 
-stringLiteral :: Parser String
-stringLiteral = L.lexeme scn $ char '"' >> manyTill L.charLiteral (char '"')
-
-untilSpace :: Parser String
-untilSpace = L.lexeme scn $ takeWhile1P Nothing (\x -> notElem x " \t\n")
-
 annotations' :: Parser Annotations
 annotations' = many $ do
     symbol "@"
     x <- identifier
-    (try $ symbol "=" >> (try stringLiteral <|> untilSpace) <&> AssignmentAnnotation x)
+    (try $ symbol "=" >> ((try stringLiteral <* scn) <|> untilSpace) <&> AssignmentAnnotation x)
         <|> (scn >> (return $ SimpleAnnotation x))
 
 arrow :: FunctionArgument -> Parser TypeDefinition
@@ -189,13 +189,30 @@ functionDefinition annotations = do
     typeDefinition'' <- typeDefinition'
     return $ FunctionDefinition {name = name, typeDefinition = typeDefinition'', annotations}
 
+importRule :: Parser ImportRule
+importRule = option Unqualifed 
+    ((try identifier <&> Qualified)
+        <|> ((between (symbol "{") (symbol "}") $ sepBy1 (
+            do
+                x <- identifier
+                y <- importRule
+                return (x, y)) $ symbol ",")
+                <&> UnqualifedOnly))
+
+import' :: Annotations -> Parser TopLevelStatement
+import' annotations = do
+    symbol "import"
+    url <- stringLiteral
+    rule <- importRule
+    return $ Import { url, rule, annotations }
+
 root :: Parser Root
 root =
     scn 
     >> manyTill
         (do
             x <- option [] (annotations')
-            (try (dataDefinition x) 
-                <|> functionDefinition x) <* scn) 
+            choice [import' x, dataDefinition x, functionDefinition x]
+            <* scn) 
         eof
     <&> Root
