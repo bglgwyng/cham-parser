@@ -142,7 +142,7 @@ importRule sc' =
             do
                 x <- identifier
                 y <- importRule sc'
-                return (x, y)) $ symbol ",")
+                return (x, y)) $ try $ symbol ",")
                 <&> UnqualifedOnly)
 
 import' :: Annotations -> Parser TopLevelDeclaration
@@ -161,7 +161,6 @@ source =
     >> many
         (do
             x <- hidden $ option [] topLevelAnnotations
-            choice $ [import' x, dataDeclaration x, typeDeclaration x
-                ])
+            choice $ [import' x, dataDeclaration x, typeDeclaration x])
     <* hidden eof
     <&> Source
