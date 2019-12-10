@@ -81,10 +81,9 @@ annotation sc' = do
     let identifier = identifier' sc'
     -- TODO: better logic for escaping
     let stringLiteral = stringLiteral' sc'
-    let untilSpace = option () sc' >> takeWhile1P Nothing (\x -> notElem x " \t\n")
     symbol "@"
     x <- identifier
-    (try $ symbol "=" >> (stringLiteral <|> empty) <&> AssignmentAnnotation x)
+    (try $ symbol "=" >> (try stringLiteral <|> identifier) <&> AssignmentAnnotation x)
         <|> ((return $ SimpleAnnotation x))
         
 annotations' :: Parser () -> Parser Annotations
