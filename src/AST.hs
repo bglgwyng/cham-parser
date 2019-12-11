@@ -37,7 +37,6 @@ instance Show Argument where
 data Term =
     Arrow Argument Term |
     Apply Term Term |
-    Parenthesized Term |
     Variable String
     deriving Generic
 
@@ -45,7 +44,6 @@ instance Show Term where
     show x = case x of
         Arrow y z       -> show y ++ " -> " ++ show z
         Apply y z       -> show y ++ " " ++ show z
-        Parenthesized y -> "(" ++ show y ++ ")"
         Variable y      -> y
 
 data Constructor =

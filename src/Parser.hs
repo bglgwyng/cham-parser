@@ -63,7 +63,7 @@ term' sc' = do
         argType <- symbol ":" >> term' sc' <* symbol ")"
         arrow $ NamedArgument argName argType)
         <|> do
-            x <- (try $ identifier <&> Variable) <|> (parenthesized (term' sc') <&> Parenthesized)
+            x <- (try $ identifier <&> Variable) <|> (parenthesized $ term' sc')
             choice [
                 try $ arrow $ UnnamedArgument x,
                 try $ term' sc' <&> Apply x,
