@@ -1,16 +1,17 @@
 module Main where
 
-import Data.Aeson
-import Text.Megaparsec
-import Prelude hiding (putStrLn)
-import Data.String.Class (putStrLn)
+import           Data.Aeson
+import           Data.String.Class (putStrLn)
+import           Prelude           hiding (putStrLn)
+import           System.Exit
+import           Text.Megaparsec
 
-import Lib
+import           Lib
 
 main :: IO ()
 main = do
   input <- getContents
   case parse source "" input of
-    Left error -> putStrLn $ errorBundlePretty error
-    Right ast -> putStrLn $ encode ast
+    Left error -> die $ errorBundlePretty error
+    Right ast  -> putStrLn $ encode ast
   return ()
