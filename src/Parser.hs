@@ -70,12 +70,12 @@ term'' sc' =
     namedArgument = do
         argName <- symbol "(" >> identifier
         argType <- symbol ":" >> term' sc' <* symbol ")"
-        arrow $ NamedArgument argName argType
+        arrow $ Named argName argType
 
 term' :: Parser () -> Parser Term
 term' sc' = do
         x <- (some $ try $ term'' sc') <&> foldl1 Apply
-        (try $ arrow $ UnnamedArgument x) 
+        (try $ arrow $ Unnamed x)
             <|> return x where
     symbol = symbol' sc'
     identifier = identifier' sc'
@@ -95,8 +95,8 @@ annotation sc' = do
     let stringLiteral = stringLiteral' sc'
     symbol "@"
     x <- identifier
-    (try $ symbol "=" >> (try stringLiteral <|> identifier) <&> AssignmentAnnotation x)
-        <|> ((return $ SimpleAnnotation x))
+    (try $ symbol "=" >> (try stringLiteral <|> identifier) <&> Assignment x)
+        <|> ((return $ Simple x))
         
 annotations' :: Parser () -> Parser Annotations
 annotations' sc' = many $ try $ annotation sc'
@@ -120,10 +120,10 @@ dataDeclaration annotations = topLevel $ \sc' -> do
             return $  Record fields
     let simple = do
             args <- many $ try $ term'' sc'
-            return $ Simple args
+            return $ Constructor args
     symbol "data"
     name <- identifier
-    args <- many $ try identifier
+    arguments <- many $ try identifier
     symbol "="
     variants <- sepBy1 (try $ do
         annotations <- hidden $ option [] $ annotations' sc'
@@ -132,7 +132,7 @@ dataDeclaration annotations = topLevel $ \sc' -> do
         y <- try record <|> simple
         return $ (annotations, name, y))
         $ try $ symbol "|"
-    return DataDeclaration { name, args, variants, annotations }
+    return DataDeclaration { name, arguments, variants, annotations }
         
 
 typeDeclaration :: Annotations -> Parser TopLevelDeclaration

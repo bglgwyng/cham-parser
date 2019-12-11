@@ -9,18 +9,18 @@ module AST where
 import           Data.Aeson
 import           Data.Aeson.Encoding (text)
 import           Data.List
-import           GHC.Generics hiding (Constructor)
+import           GHC.Generics        hiding (Constructor)
 
 data Annotation =
-    SimpleAnnotation String |
-    AssignmentAnnotation String String
+    Simple String |
+    Assignment String String
     deriving Generic
 
 type Annotations = [Annotation]
 
 data Argument =
-    NamedArgument String Term |
-    UnnamedArgument Term
+    Named String Term |
+    Unnamed Term
     deriving Generic
 
 data Term =
@@ -31,7 +31,7 @@ data Term =
     deriving Generic
 
 data Constructor =
-    Simple [Term] |
+    Constructor [Term] |
     Record [(String, Term)]
     deriving Generic
 
@@ -45,7 +45,7 @@ data ImportRule =
 data TopLevelDeclaration =
     DataDeclaration {
         name        :: String,
-        args        :: [String],
+        arguments   :: [String],
         variants    :: [(Annotations, String, Constructor)],
         annotations :: Annotations
     } |
@@ -64,15 +64,15 @@ data TopLevelDeclaration =
 data Source = Source [TopLevelDeclaration] deriving Generic
 
 
-options :: Options    
+options :: Options
 options = defaultOptions { sumEncoding = TwoElemArray, unwrapUnaryRecords = True, allNullaryToStringTag  = True }
 
 instance ToJSON Annotation where
     toEncoding = genericToEncoding options
-    
+
 instance ToJSON Argument where
     toEncoding = genericToEncoding options
-        
+
 instance ToJSON Term where
     toEncoding = genericToEncoding options
 
@@ -82,7 +82,7 @@ instance ToJSON Constructor where
 instance ToJSON ImportRule where
     -- FIXME: allNullaryToStringTag doesn't work...
     toEncoding Unqualified = text "Unqualified"
-    toEncoding x = genericToEncoding options x
+    toEncoding x           = genericToEncoding options x
 
 instance ToJSON TopLevelDeclaration where
     toEncoding = genericToEncoding options
