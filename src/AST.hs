@@ -37,6 +37,7 @@ instance Show Argument where
 data Term =
     Arrow Argument Term |
     Apply Term Term |
+    Tuple [Term] |
     Variable String
     deriving Generic
 

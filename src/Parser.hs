@@ -61,7 +61,8 @@ term'' :: Parser () -> Parser Term
 term'' sc' =
     (try $ identifier <&> Variable) 
         <|> (try namedArgument)
-        <|> (parenthesized $ term' sc') where
+        <|> (try $ parenthesized $ term' sc') 
+        <|> (parenthesized $ sepBy1 (term' sc') (symbol ",") <&> Tuple) where
     symbol = symbol' sc'
     identifier = identifier' sc'
     parenthesized x = between (symbol "(" ) (symbol ")") x
