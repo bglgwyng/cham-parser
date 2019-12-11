@@ -136,14 +136,14 @@ importRule :: Parser () -> Parser ImportRule
 importRule sc' =
     let symbol = symbol' sc' in
     let identifier = identifier' sc' in
-    option Unqualifed $    
+    option Unqualified $    
     (try identifier <&> Qualified)
         <|> (try $ (between (symbol "{") (symbol "}") $ sepBy1 (
             do
                 x <- identifier
                 y <- importRule sc'
                 return (x, y)) $ try $ symbol ",")
-                <&> UnqualifedOnly)
+                <&> UnqualifiedOnly)
 
 import' :: Annotations -> Parser TopLevelDeclaration
 import' annotations = topLevel $ \sc' -> do

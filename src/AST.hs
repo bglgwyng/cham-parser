@@ -7,7 +7,7 @@
 module AST where
 
 import           Data.Aeson
--- import           Data.Vector
+import           Data.Aeson.Encoding (text)
 import           Data.List
 import           GHC.Generics hiding (Constructor)
 
@@ -59,14 +59,14 @@ instance Show Constructor where
 
 -- TODO: Better name
 data ImportRule =
-    Unqualifed |
-    UnqualifedOnly [(String, ImportRule)] |
+    Unqualified |
+    UnqualifiedOnly [(String, ImportRule)] |
     Qualified String
     deriving Generic
 
 instance Show ImportRule where
-    show Unqualifed = "";
-    show (UnqualifedOnly xs) = " { " ++ intercalate ", " [x ++ show y | (x, y) <- xs] ++ " }"
+    show Unqualified = "";
+    show (UnqualifiedOnly xs) = " { " ++ intercalate ", " [x ++ show y | (x, y) <- xs] ++ " }"
     show (Qualified xs) = " " ++ xs
 
 data TopLevelDeclaration =
@@ -109,7 +109,7 @@ instance Show Source where
     show (Source definitions) = intercalate "\n" (map show definitions)
 
 options :: Options    
-options = defaultOptions { sumEncoding = TwoElemArray }
+options = defaultOptions { sumEncoding = TwoElemArray, unwrapUnaryRecords = True, allNullaryToStringTag  = True }
 
 instance ToJSON Annotation where
     toEncoding = genericToEncoding options
@@ -124,7 +124,9 @@ instance ToJSON Constructor where
     toEncoding = genericToEncoding options
 
 instance ToJSON ImportRule where
-    toEncoding = genericToEncoding options
+    -- FIXME: allNullaryToStringTag doesn't work...
+    toEncoding Unqualified = text "Unqualified"
+    toEncoding x = genericToEncoding options x
 
 instance ToJSON TopLevelDeclaration where
     toEncoding = genericToEncoding options
