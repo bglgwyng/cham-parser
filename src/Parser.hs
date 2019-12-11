@@ -172,6 +172,6 @@ source =
     >> many
         (do
             x <- hidden $ option [] topLevelAnnotations
-            choice $ [import' x, dataDeclaration x, typeDeclaration x])
+            choice $ [try $ import' x, try $ dataDeclaration x, typeDeclaration x])
     <* hidden eof
     <&> Source
