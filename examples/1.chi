@@ -41,8 +41,7 @@ data A # line comment
 # sad
 # sdfsdf
 data A a = 
-  A (a -> a) | A { a: #sdfsdf
- String -> b } | A b -> c| C {b:String -> String}
+  A (a -> a) | A { a: String -> b } | A (b -> c)| C {b:String -> String}
 
 # data A a = A { a: String } | A b
 
