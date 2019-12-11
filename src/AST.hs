@@ -16,23 +16,12 @@ data Annotation =
     AssignmentAnnotation String String
     deriving Generic
 
-instance Show Annotation where
-    show (SimpleAnnotation x)       = "@" ++ x
-    show (AssignmentAnnotation x y) = "@" ++ x ++ " = " ++ y
-
 type Annotations = [Annotation]
-
-instance {-# Overlapping #-} Show Annotations where
-    show xs = concat ((++ "\n") . show <$> xs)
 
 data Argument =
     NamedArgument String Term |
     UnnamedArgument Term
     deriving Generic
-
-instance Show Argument where
-    show (NamedArgument x y) = "(" ++ x ++ " : " ++ show y ++ ")"
-    show (UnnamedArgument y) = show y
 
 data Term =
     Arrow Argument Term |
@@ -41,20 +30,10 @@ data Term =
     Variable String
     deriving Generic
 
-instance Show Term where
-    show x = case x of
-        Arrow y z       -> show y ++ " -> " ++ show z
-        Apply y z       -> show y ++ " " ++ show z
-        Variable y      -> y
-
 data Constructor =
     Simple [Term] |
     Record [(String, Term)]
     deriving Generic
-
-instance Show Constructor where
-    show (Simple as) = concat (map ((" " ++) . show) as)
-    show (Record fields) = " { " ++ intercalate ", " [x ++ " : " ++ show y | (x, y) <- fields] ++ " }"
 
 -- TODO: Better name
 data ImportRule =
@@ -62,11 +41,6 @@ data ImportRule =
     UnqualifiedOnly [(String, ImportRule)] |
     Qualified String
     deriving Generic
-
-instance Show ImportRule where
-    show Unqualified = "";
-    show (UnqualifiedOnly xs) = " { " ++ intercalate ", " [x ++ show y | (x, y) <- xs] ++ " }"
-    show (Qualified xs) = " " ++ xs
 
 data TopLevelDeclaration =
     DataDeclaration {
@@ -87,25 +61,8 @@ data TopLevelDeclaration =
     }
     deriving Generic
 
-
-instance Show TopLevelDeclaration where
-    show DataDeclaration { name, args, variants, annotations } =
-        show annotations
-        ++ "data " ++ name ++ args'
-        ++ " = " ++ variants' where
-            args' = concat [" " ++ x | x <- args]
-            variants' = " | " `intercalate` [show x ++ y ++ show z | (x, y, z) <- variants]
-    show TypeDeclaration { name, typeDefinition, annotations } =
-        show annotations
-        ++ name ++ " : " ++ (show typeDefinition)
-    show Import { annotations, url, rule } =
-        show annotations
-        ++ "import " ++ show url ++ show rule
-
 data Source = Source [TopLevelDeclaration] deriving Generic
 
-instance Show Source where
-    show (Source definitions) = intercalate "\n" (map show definitions)
 
 options :: Options    
 options = defaultOptions { sumEncoding = TwoElemArray, unwrapUnaryRecords = True, allNullaryToStringTag  = True }
