@@ -119,7 +119,7 @@ dataDeclaration annotations = topLevel $ \sc' -> do
             symbol "}"
             return $  Record fields
     let simple = do
-            args <- many $ try $ term' sc'
+            args <- many $ try $ term'' sc'
             return $ Simple args
     symbol "data"
     name <- identifier
