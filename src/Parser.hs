@@ -52,22 +52,33 @@ identifier' sc' = option () sc' >> (sepBy1 x $ char '.') <&> intercalate "." whe
         rest <- takeWhileP Nothing (\x -> isAlpha x || isDigit x || elem x "'")
         return $ first:rest
 
-term' :: Parser () -> Parser Term
-term' sc' = do
-    let symbol = symbol' sc'
-    let identifier = identifier' sc'
-    let arrow x = symbol "->" >> term' sc' <&> Arrow x
-    let parenthesized x = between (symbol "(" ) (symbol ")") x
-    (try $ do
+arrow' :: Parser () -> Argument -> Parser Term
+arrow' sc' x = symbol "->" >> term' sc' <&> Arrow x where
+    symbol = symbol' sc'
+
+-- Term that is not Apply and doesn't start with application like `a b -> c`
+term'' :: Parser () -> Parser Term
+term'' sc' =
+    (try $ identifier <&> Variable) 
+        <|> (try namedArgument)
+        <|> (parenthesized $ term' sc') where
+    symbol = symbol' sc'
+    identifier = identifier' sc'
+    parenthesized x = between (symbol "(" ) (symbol ")") x
+    arrow = arrow' sc'
+    namedArgument = do
         argName <- symbol "(" >> identifier
         argType <- symbol ":" >> term' sc' <* symbol ")"
-        arrow $ NamedArgument argName argType)
-        <|> do
-            x <- (try $ identifier <&> Variable) <|> (parenthesized $ term' sc')
-            choice [
-                try $ arrow $ UnnamedArgument x,
-                try $ term' sc' <&> Apply x,
-                return x]
+        arrow $ NamedArgument argName argType
+
+term' :: Parser () -> Parser Term
+term' sc' = do
+        x <- (some $ try $ term'' sc') <&> foldl1 Apply
+        (try $ arrow $ UnnamedArgument x) 
+            <|> return x where
+    symbol = symbol' sc'
+    identifier = identifier' sc'
+    arrow = arrow' sc'
 
 indentable :: (Parser () -> Parser a) -> Parser a
 indentable x = L.lineFold scn x <* scn
@@ -108,7 +119,7 @@ dataDeclaration annotations = topLevel $ \sc' -> do
             return $  Record fields
     let simple = do
             args <- many $ try $ term' sc'
-            return $ Simple []
+            return $ Simple args
     symbol "data"
     name <- identifier
     args <- many $ try identifier
