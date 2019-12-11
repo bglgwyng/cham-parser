@@ -35,7 +35,7 @@ stringLiteral' sc' = do
     -- forbid multiline
     if elem '\n' x
         then empty
-        else return x 
+        else return x
 
 untilSpace :: Parser String
 untilSpace = L.lexeme scn $ takeWhile1P Nothing (\x -> notElem x " \t\n")
@@ -59,10 +59,10 @@ arrow' sc' x = symbol "->" >> term' sc' <&> Arrow x where
 -- Term that is not Apply and doesn't start with application like `a b -> c`
 term'' :: Parser () -> Parser Term
 term'' sc' =
-    (try $ identifier <&> Variable) 
-        <|> (try namedArgument)
-        <|> (try $ parenthesized $ term' sc') 
-        <|> (parenthesized $ sepBy1 (term' sc') (symbol ",") <&> Tuple) where
+    (try $ identifier <&> Variable)
+    <|> (try namedArgument)
+    <|> (try $ parenthesized $ term' sc')
+    <|> (parenthesized $ sepBy1 (term' sc') (symbol ",") <&> Tuple) where
     symbol = symbol' sc'
     identifier = identifier' sc'
     parenthesized x = between (symbol "(" ) (symbol ")") x
@@ -96,8 +96,8 @@ annotation sc' = do
     symbol "@"
     x <- identifier
     (try $ symbol "=" >> (try stringLiteral <|> identifier) <&> Assignment x)
-        <|> ((return $ Simple x))
-        
+        <|> (return $ Simple x)
+
 annotations' :: Parser () -> Parser Annotations
 annotations' sc' = many $ try $ annotation sc'
 
@@ -133,7 +133,7 @@ dataDeclaration annotations = topLevel $ \sc' -> do
         return $ (annotations, name, y))
         $ try $ symbol "|"
     return DataDeclaration { name, arguments, variants, annotations }
-        
+
 
 typeDeclaration :: Annotations -> Parser TopLevelDeclaration
 typeDeclaration annotations = topLevel $ \sc' -> do
@@ -142,20 +142,20 @@ typeDeclaration annotations = topLevel $ \sc' -> do
     name <- identifier
     symbol ":"
     term'' <- term' sc'
-    return $ TypeDeclaration {name = name, typeDefinition = term'', annotations}
+    return $ TypeDeclaration { name = name, typeDefinition = term'', annotations }
 
 importRule :: Parser () -> Parser ImportRule
 importRule sc' =
     let symbol = symbol' sc' in
     let identifier = identifier' sc' in
-    option Unqualified $    
+    option Unqualified $
     (try identifier <&> Qualified)
-        <|> (try $ (between (symbol "{") (symbol "}") $ sepBy1 (
-            do
-                x <- identifier
-                y <- importRule sc'
-                return (x, y)) $ try $ symbol ",")
-                <&> UnqualifiedOnly)
+    <|> (try $ (between (symbol "{") (symbol "}") $ sepBy1 (
+        do
+            x <- identifier
+            y <- importRule sc'
+            return (x, y)) $ try $ symbol ",")
+            <&> UnqualifiedOnly)
 
 import' :: Annotations -> Parser TopLevelDeclaration
 import' annotations = topLevel $ \sc' -> do
@@ -169,10 +169,10 @@ import' annotations = topLevel $ \sc' -> do
 
 source :: Parser Source
 source =
-    scn
-    >> many
-        (do
-            x <- hidden $ option [] topLevelAnnotations
-            choice $ [try $ import' x, try $ dataDeclaration x, typeDeclaration x])
+    (many $ do
+        x <- hidden $ option [] topLevelAnnotations
+        (try $ import' x)
+            <|> (try $ dataDeclaration x)
+            <|> typeDeclaration x)
     <* hidden eof
     <&> Source
