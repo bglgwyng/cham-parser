@@ -1,0 +1,6 @@
+data Maybe a = Just a | Nothing
+data List a = Nil | Cons a
+data Pair a b = Pair a b
+
+first: Pair a b -> a
+second: Pair a b -> a

@@ -1,0 +1,40 @@
+@JSON.Number
+Number: Type
+@JSON.String
+String: Type
+@JSON.Boolean
+Boolean: Type
+@JSON.Array
+List: Type -> Type
+
+data Pair a b = Pair a b
+pair: a -> b -> Pair a b
+
+first: Pair a b -> a
+second: Pair a b -> b
+
+data Result a b = Ok a | Error b
+then1: Result a b -> (Result c d) -> Result c d
+then2: Result a b -> (a -> Result c d) -> Result c d
+catch1: Result a b -> (b -> Result c d) -> Result c d
+
+
+data Task = Todo { id: String, body: String, done: Boolean, createdAt: Number }
+
+@JSON.Null
+Void: Type
+
+@Unserializable
+Service: Type
+
+data AuthenticationError = UserNotFound | PasswordWrong
+
+authenticate: (username: String) -> (password: String) -> Result Service AuthenticationError
+
+append: List a -> List a -> List (a, b, c)
+take: (n: Number) -> List a -> List a
+skip: (n: Number) -> List a -> List a
+
+addTask: Service -> (title: String) -> Result String String
+removeTask: Service -> (id: String) -> Result Void String
+tasks: Service -> Result (List Task) String

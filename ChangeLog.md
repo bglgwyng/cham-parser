@@ -1,3 +1,3 @@
-# Changelog for chamchi-parser
+# Changelog for cham-parser
 
 ## Unreleased changes

@@ -1,2 +1,0 @@
-data List a = Nil | Cons a
-data A a b = A a b

@@ -1,8 +1,0 @@
-# sdf
-# sdf
-#
-data A a b = B a (b:c) -> d -> b
-a: ((a: b)->e c (d) (e,c,(f,g))) B
-a: ((a.asd: b (e) ->a )->e c d) B
-d: (a,b,c)
-i: (a b, c, d -> e f) -> (a ->b, (c:a) ->b)$
