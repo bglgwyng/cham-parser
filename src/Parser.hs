@@ -49,7 +49,7 @@ identifier' :: Parser () -> Parser String
 identifier' sc' = option () sc' >> (sepBy1 x $ char '.') <&> intercalate "." where
     x = do
         first <- satisfy isAlpha
-        rest <- takeWhileP Nothing (\x -> isAlpha x || isDigit x || elem x "'")
+        rest <- takeWhileP Nothing (\x -> isAlpha x || isDigit x)
         return $ first:rest
 
 arrow' :: Parser () -> Argument -> Parser Term
