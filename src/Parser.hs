@@ -68,9 +68,13 @@ term'' sc' =
     parenthesized x = between (symbol "(" ) (symbol ")") x
     arrow = arrow' sc'
     namedArgument = do
-        argName <- symbol "(" >> identifier
-        argType <- symbol ":" >> term' sc' <* symbol ")"
-        arrow $ Named argName argType
+        symbol "("
+        args <- sepBy1 (do
+            argName <- identifier
+            argType <- symbol ":" >> term' sc'
+            return (argName, argType)) $ symbol ","
+        symbol ")"
+        arrow $ Named args
 
 term' :: Parser () -> Parser Term
 term' sc' = do

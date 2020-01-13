@@ -29,12 +29,12 @@ Service: Type
 
 data AuthenticationError = UserNotFound | PasswordWrong
 
-authenticate: (username: String) -> (password: String) -> Result Service AuthenticationError
+authenticate: (username: String, password: String) -> Result Service AuthenticationError
 
 append: List a -> List a -> List (a, b, c)
 take: (n: Number) -> List a -> List a
 skip: (n: Number) -> List a -> List a
 
-addTask: Service -> (title: String) -> Result String String
+addTask: (service: Service, title: String) -> Result String String
 removeTask: Service -> (id: String) -> Result Void String
 tasks: Service -> Result (List Task) String
