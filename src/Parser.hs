@@ -46,10 +46,16 @@ symbol' x y = label y $ do
     (forM_ y char)
 
 name' :: Parser String
-name' = do
-    first <- satisfy isAlpha
-    rest <- takeWhileP Nothing (\x -> isAlpha x || isDigit x)
-    return $ first:rest
+name' = 
+    let alphanumeric_ x = isAlpha x || isDigit x || x == '_' in
+    (try $ do
+        first <- satisfy isAlpha
+        rest <- takeWhileP Nothing alphanumeric_
+        return $ first:rest)
+    <|> do
+        first <- char '_'
+        rest <- takeWhile1P Nothing alphanumeric_
+        return $ first:rest
 
 implicitArguments' :: Parser () -> Parser String
 implicitArguments' sc' = option () sc' >> char '\'' >> name'
