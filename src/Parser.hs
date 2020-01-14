@@ -45,12 +45,20 @@ symbol' x y = label y $ do
     option () x
     (forM_ y char)
 
+name' :: Parser String
+name' = do
+    first <- satisfy isAlpha
+    rest <- takeWhileP Nothing (\x -> isAlpha x || isDigit x)
+    return $ first:rest
+
+implicitArguments' :: Parser () -> Parser String
+implicitArguments' sc' = option () sc' >> char '\'' >> name'
+
+newIdentifier' :: Parser () -> Parser String
+newIdentifier' sc' = option () sc' >> name'
+
 identifier' :: Parser () -> Parser String
-identifier' sc' = option () sc' >> (sepBy1 x $ char '.') <&> intercalate "." where
-    x = do
-        first <- satisfy isAlpha
-        rest <- takeWhileP Nothing (\x -> isAlpha x || isDigit x)
-        return $ first:rest
+identifier' sc' = option () sc' >> (sepBy1 name' $ char '.') <&> intercalate "."
 
 arrow' :: Parser () -> Argument -> Parser Term
 arrow' sc' x = symbol "->" >> term' sc' <&> Arrow x where
@@ -64,13 +72,14 @@ term'' sc' =
     <|> (try $ parenthesized $ term' sc')
     <|> (parenthesized $ sepBy1 (term' sc') (symbol ",") <&> Tuple) where
     symbol = symbol' sc'
+    newIdentifier = newIdentifier' sc'
     identifier = identifier' sc'
     parenthesized x = between (symbol "(" ) (symbol ")") x
     arrow = arrow' sc'
     namedArgument = do
         symbol "("
         args <- sepBy1 (do
-            argName <- identifier
+            argName <- newIdentifier
             argType <- symbol ":" >> term' sc'
             return (argName, argType)) $ symbol ","
         symbol ")"
@@ -82,7 +91,7 @@ term' sc' = do
         (try $ arrow $ Unnamed x)
             <|> return x where
     symbol = symbol' sc'
-    identifier = identifier' sc'
+    identifier = newIdentifier' sc'
     arrow = arrow' sc'
 
 indentable :: (Parser () -> Parser a) -> Parser a
@@ -111,12 +120,12 @@ topLevelAnnotations = many $ try $ indentable annotation
 dataDeclaration :: Annotations -> Parser TopLevelDeclaration
 dataDeclaration annotations = topLevel $ \sc' -> do
     let symbol = symbol' sc'
-    let identifier = identifier' sc'
+    let newIdentifier = newIdentifier' sc'
     -- TODO: bettern error message
     let record = do
             symbol "{"
             fields <- sepBy1 (try $ do
-                name <- identifier
+                name <- newIdentifier
                 symbol ":"
                 typeDefinition <- term' sc'
                 return (name, typeDefinition)) (try $ symbol ",")
@@ -126,12 +135,12 @@ dataDeclaration annotations = topLevel $ \sc' -> do
             args <- many $ try $ term'' sc'
             return $ Constructor args
     symbol "data"
-    name <- identifier
-    arguments <- many $ try identifier
+    name <- newIdentifier
+    arguments <- many $ try newIdentifier
     symbol "="
     variants <- sepBy1 (try $ do
         annotations <- hidden $ option [] $ annotations' sc'
-        name <- identifier
+        name <- newIdentifier
         -- FIXME: why not working order swapped?
         y <- try record <|> simple
         return $ (annotations, name, y))
@@ -142,8 +151,8 @@ dataDeclaration annotations = topLevel $ \sc' -> do
 typeDeclaration :: Annotations -> Parser TopLevelDeclaration
 typeDeclaration annotations = topLevel $ \sc' -> do
     let symbol = symbol' sc'
-    let identifier = identifier' sc'
-    name <- identifier
+    let newIdentifier = newIdentifier' sc'
+    name <- newIdentifier
     symbol ":"
     term'' <- term' sc'
     return $ TypeDeclaration { name = name, typeDefinition = term'', annotations }
@@ -151,9 +160,10 @@ typeDeclaration annotations = topLevel $ \sc' -> do
 importRule :: Parser () -> Parser ImportRule
 importRule sc' =
     let symbol = symbol' sc' in
+    let newIdentifier = newIdentifier' sc' in
     let identifier = identifier' sc' in
     option Unqualified $
-    (try identifier <&> Qualified)
+    (try newIdentifier <&> Qualified)
     <|> (try $ (between (symbol "{") (symbol "}") $ sepBy1 (
         do
             x <- identifier
@@ -164,7 +174,6 @@ importRule sc' =
 import' :: Annotations -> Parser TopLevelDeclaration
 import' annotations = topLevel $ \sc' -> do
     let symbol = symbol' sc'
-    let identifier = identifier' sc'
     let stringLiteral = stringLiteral' sc'
     symbol "import"
     url <- stringLiteral
