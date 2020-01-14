@@ -14,7 +14,7 @@ first: Pair a b -> a
 second: Pair a b -> b
 
 data Result a b = Ok a | Error b
-then1: Result a b -> (Result c d) -> Result c d
+then1: Result a_ b -> (Result c d) -> Result c d
 then2: Result a b -> (a -> Result c d) -> Result c d
 catch1: Result a b -> (b -> Result c d) -> Result c d
 
@@ -29,12 +29,12 @@ Service: Type
 
 data AuthenticationError = UserNotFound | PasswordWrong
 
-authenticate: (username: String, password: String) -> Result Service AuthenticationError
+authenticate: (username: String) -> (password: String) -> Result Service AuthenticationError
 
-append: List a -> List a -> List (a, b, c)
+append: List a -> List a -> List (a231.asd, b, c)
 take: (n: Number) -> List a -> List a
 skip: (n: Number) -> List a -> List a
 
-addTask: (service: Service, title: String) -> Result String String
+addTask: (service: Service) -> (title: String) -> Result String String
 removeTask: Service -> (id: String) -> Result Void String
 tasks: Service -> Result (List Task) String

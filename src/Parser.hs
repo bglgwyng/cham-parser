@@ -84,12 +84,10 @@ term'' sc' =
     arrow = arrow' sc'
     namedArgument = do
         symbol "("
-        args <- sepBy1 (do
-            argName <- newIdentifier
-            argType <- symbol ":" >> term' sc'
-            return (argName, argType)) $ symbol ","
+        argName <- newIdentifier
+        argType <- symbol ":" >> term' sc'
         symbol ")"
-        arrow $ Named args
+        arrow $ Named argName argType
 
 term' :: Parser () -> Parser Term
 term' sc' = do

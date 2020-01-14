@@ -19,7 +19,7 @@ data Annotation =
 type Annotations = [Annotation]
 
 data Argument =
-    Named [(String, Term)] |
+    Named String Term |
     Unnamed Term
     deriving Generic
 
